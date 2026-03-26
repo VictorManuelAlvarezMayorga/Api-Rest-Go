@@ -48,15 +48,44 @@ func getCarByID(c *gin.Context) {
 			return
 		}
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"Messag": "Auto no encontrado"})
+	c.IndentedJSON(http.StatusNotFound, gin.H{"Message": "Auto no encontrado"})
 }
 
 func deleteCar(c *gin.Context) {
+	id := c.Param("id")
 
+	for i, a := range cars {
+		if a.ID == id {
+			cars = append(cars[:i], cars[i+1:]...)
+			c.IndentedJSON(http.StatusOK, gin.H{"Message": "Eliminado con exito"})
+			return
+		}
+	}
+	c.IndentedJSON(http.StatusNotFound, gin.H{"Message": "Auto no encontrado"})
 }
 
 func editCar(c *gin.Context) {
+	id := c.Param("id")
+	var updatedCar car
 
+	if err := c.BindJSON(&updatedCar); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"error":   "Error al actualizar Auto",
+			"detalle": err.Error(),
+		})
+		return
+	}
+
+	for i, a := range cars {
+		if a.ID == id {
+			updatedCar.ID = a.ID // Conserva el ID original
+			cars[i] = updatedCar
+			c.IndentedJSON(http.StatusOK, cars[i])
+			return
+		}
+	}
+
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Auto no encontrado"})
 }
 
 func main() {
@@ -64,6 +93,8 @@ func main() {
 	router.GET("/cars", getCars)
 	router.POST("/cars", postCars)
 	router.GET("/cars/:id", getCarByID)
+	router.DELETE("/cars/:id", deleteCar)
+	router.PUT("/cars/:id", editCar)
 
 	router.Run("localhost:8080")
 }
