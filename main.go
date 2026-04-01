@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+	"net/http"
 	"os"
 	"ui2/database"
 	"ui2/routes"
@@ -11,6 +13,8 @@ import (
 func main() {
 	database.Connect()
 
+	gin.SetMode(gin.ReleaseMode)
+
 	router := gin.Default()
 	routes.Routes(router)
 
@@ -19,5 +23,14 @@ func main() {
 		port = "10000"
 	}
 
-	router.Run("0.0.0.0:" + port)
+	server := &http.Server{
+		Addr:    "0.0.0.0:" + port,
+		Handler: router,
+	}
+
+	log.Printf("Servidor iniciando en 0.0.0.0:%s", port)
+
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal("Error al iniciar servidor:", err)
+	}
 }
