@@ -15,19 +15,22 @@ func Connect() {
 	connStr := os.Getenv("DATABASE_URL")
 
 	if connStr == "" {
-		connStr = "postgresql://admin:q24RE6widrfPyqL3en21N1HLuSwkXUmm@dpg-d76hlq7pm1nc73967v1g-a.oregon-postgres.render.com/mayorgasgarage"
+		log.Println("⚠️ DATABASE_URL no definida")
+		return
 	}
 
 	var err error
 	DB, err = sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("Error al abrir la conexión: ", err)
+		log.Println("❌ Error al abrir conexión:", err)
+		return
 	}
 
 	err = DB.Ping()
 	if err != nil {
-		log.Fatal("Error al conectar con la base de datos: ", err)
+		log.Println("❌ Error al hacer ping a la DB:", err)
+		return
 	}
 
-	fmt.Println("Conexión exitosa a PostgreSQL")
+	fmt.Println("✅ Conexión exitosa a PostgreSQL")
 }

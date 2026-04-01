@@ -12,33 +12,28 @@ import (
 func main() {
 	log.Println("=== INICIANDO APP ===")
 
-	// Conexión a la base de datos
 	database.Connect()
-	log.Println("=== DB CONECTADA ===")
+	log.Println("=== CONTINÚA APP (aunque falle DB) ===")
 
-	// Configuración de Gin
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
-	// Ruta base (IMPORTANTE para Render)
+	// Ruta base obligatoria
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": "API funcionando correctamente",
+			"message": "API funcionando",
 		})
 	})
 
-	// Rutas de tu app
 	routes.Routes(router)
 
-	// Puerto dinámico (Render lo asigna)
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "10000" // fallback local
+		port = "10000"
 	}
 
-	log.Printf("=== Servidor corriendo en puerto %s ===", port)
+	log.Println("🚀 Servidor iniciando en puerto", port)
 
-	// 🚀 ESTE es el cambio clave
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Error al iniciar servidor:", err)
 	}
