@@ -19,5 +19,5 @@ func main() {
 		port = "8080" //si no hay variable, usa 8080 localmente por defecto
 	}
 
-	router.Run(":" + port)
+	router.Run("0.0.0.0:" + port)
 }
