@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 	"ui2/database"
 	"ui2/routes"
@@ -9,17 +11,22 @@ import (
 )
 
 func main() {
-	database.Connect() //conexion a la db en la nube al iniciar
+	database.Connect()
 
 	router := gin.Default()
 	routes.Routes(router)
 
-	port := os.Getenv("PORT") //render asigna el puerto automáticamente
+	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" //si no hay variable, usa 8080 localmente por defecto
+		port = "8080"
 	}
 
-	addr := "0.0.0.0:" + port
-	router.Run(addr)
+	fmt.Println("Iniciando servidor en puerto:", port)
 
+	srv := &http.Server{
+		Addr:    "0.0.0.0:" + port,
+		Handler: router,
+	}
+
+	srv.ListenAndServe()
 }
