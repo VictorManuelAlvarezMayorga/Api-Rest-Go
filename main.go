@@ -19,18 +19,21 @@ func main() {
 	routes.Routes(router)
 
 	port := os.Getenv("PORT")
+
+	log.Printf("=== PORT value: '%s' ===", port) // ✅ Veremos el valor en logs
+
 	if port == "" {
 		port = "10000"
 	}
+
+	log.Printf("=== Iniciando en 0.0.0.0:%s ===", port)
 
 	server := &http.Server{
 		Addr:    "0.0.0.0:" + port,
 		Handler: router,
 	}
 
-	log.Printf("Servidor iniciando en 0.0.0.0:%s", port)
-
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatal("Error al iniciar servidor:", err)
+		log.Fatal("Error:", err)
 	}
 }
