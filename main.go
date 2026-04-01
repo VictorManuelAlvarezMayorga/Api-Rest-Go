@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
 	"os"
 	"ui2/database"
 	"ui2/routes"
@@ -18,15 +16,8 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "10000"
 	}
 
-	fmt.Println("Iniciando servidor en puerto:", port)
-
-	srv := &http.Server{
-		Addr:    "0.0.0.0:" + port,
-		Handler: router,
-	}
-
-	srv.ListenAndServe()
+	router.Run("0.0.0.0:" + port)
 }
