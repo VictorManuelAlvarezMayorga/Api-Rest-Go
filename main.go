@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 	"ui2/database"
 	"ui2/routes"
@@ -13,29 +12,34 @@ import (
 func main() {
 	log.Println("=== INICIANDO APP ===")
 
+	// Conexión a la base de datos
 	database.Connect()
-
 	log.Println("=== DB CONECTADA ===")
 
+	// Configuración de Gin
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+
+	// Ruta base (IMPORTANTE para Render)
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "API funcionando correctamente",
+		})
+	})
+
+	// Rutas de tu app
 	routes.Routes(router)
 
+	// Puerto dinámico (Render lo asigna)
 	port := os.Getenv("PORT")
-	log.Printf("=== PORT value: '%s' ===", port)
-
 	if port == "" {
-		port = "10000"
+		port = "10000" // fallback local
 	}
 
-	log.Printf("=== Iniciando en 0.0.0.0:%s ===", port)
+	log.Printf("=== Servidor corriendo en puerto %s ===", port)
 
-	server := &http.Server{
-		Addr:    "0.0.0.0:" + port,
-		Handler: router,
-	}
-
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal("Error:", err)
+	// 🚀 ESTE es el cambio clave
+	if err := router.Run(":" + port); err != nil {
+		log.Fatal("Error al iniciar servidor:", err)
 	}
 }
