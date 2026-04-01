@@ -1,8 +1,20 @@
+package main
+
+import (
+	"log"
+	"net/http"
+	"os"
+	"ui2/database"
+	"ui2/routes"
+
+	"github.com/gin-gonic/gin"
+)
+
 func main() {
 	log.Println("=== INICIANDO APP ===")
-	
+
 	database.Connect()
-	
+
 	log.Println("=== DB CONECTADA ===")
 
 	gin.SetMode(gin.ReleaseMode)
