@@ -3,19 +3,31 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"ui2/database"
 	"ui2/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-var Customers = []models.Customer{
-	{ID: 1, FirstName: "Fercho", LastName: "Urquiza", Email: "fergurquiza@gmail.com", Phone: "4491234567", Address: "Av. López Mateos 123, Aguascalientes"},
-	{ID: 2, FirstName: "Ana", LastName: "González", Email: "anagabycars@gmail.com", Phone: "4499876543", Address: "Calle Morelos 456, Guadalajara"},
-	{ID: 3, FirstName: "Roberto", LastName: "Musso", Email: "roberto.musso@gmail.com", Phone: "4495556789", Address: "Blvd. Zacatecas 789, Aguascalientes"},
-}
-
 func GetCustomers(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, Customers)
+	rows, err := database.DB.Query("SELECT id, first_name, last_name, email, phone, address FROM customers")
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener clientes"})
+		return
+	}
+	defer rows.Close()
+
+	var customers []models.Customer
+	for rows.Next() {
+		var customer models.Customer
+		err := rows.Scan(&customer.ID, &customer.FirstName, &customer.LastName, &customer.Email, &customer.Phone, &customer.Address)
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al leer datos"})
+			return
+		}
+		customers = append(customers, customer)
+	}
+	c.IndentedJSON(http.StatusOK, customers)
 }
 
 func GetCustomerByID(c *gin.Context) {
@@ -25,13 +37,14 @@ func GetCustomerByID(c *gin.Context) {
 		return
 	}
 
-	for _, customer := range Customers {
-		if customer.ID == id {
-			c.IndentedJSON(http.StatusOK, customer)
-			return
-		}
+	var customer models.Customer
+	err = database.DB.QueryRow("SELECT id, first_name, last_name, email, phone, address FROM customers WHERE id = $1", id).
+		Scan(&customer.ID, &customer.FirstName, &customer.LastName, &customer.Email, &customer.Phone, &customer.Address)
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Cliente no encontrado"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Cliente no encontrado"})
+	c.IndentedJSON(http.StatusOK, customer)
 }
 
 func PostCustomer(c *gin.Context) {
@@ -45,7 +58,14 @@ func PostCustomer(c *gin.Context) {
 		return
 	}
 
-	Customers = append(Customers, newCustomer)
+	err := database.DB.QueryRow(
+		"INSERT INTO customers (first_name, last_name, email, phone, address) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		newCustomer.FirstName, newCustomer.LastName, newCustomer.Email, newCustomer.Phone, newCustomer.Address,
+	).Scan(&newCustomer.ID)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al insertar cliente"})
+		return
+	}
 	c.IndentedJSON(http.StatusCreated, newCustomer)
 }
 
@@ -57,7 +77,6 @@ func UpdateCustomer(c *gin.Context) {
 	}
 
 	var updatedCustomer models.Customer
-
 	if err := c.BindJSON(&updatedCustomer); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"error":   "Error al actualizar cliente",
@@ -66,15 +85,17 @@ func UpdateCustomer(c *gin.Context) {
 		return
 	}
 
-	for i, customer := range Customers {
-		if customer.ID == id {
-			updatedCustomer.ID = customer.ID
-			Customers[i] = updatedCustomer
-			c.IndentedJSON(http.StatusOK, Customers[i])
-			return
-		}
+	_, err = database.DB.Exec(
+		"UPDATE customers SET first_name=$1, last_name=$2, email=$3, phone=$4, address=$5 WHERE id=$6",
+		updatedCustomer.FirstName, updatedCustomer.LastName, updatedCustomer.Email, updatedCustomer.Phone, updatedCustomer.Address, id,
+	)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al actualizar cliente"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Cliente no encontrado"})
+
+	updatedCustomer.ID = id
+	c.IndentedJSON(http.StatusOK, updatedCustomer)
 }
 
 func DeleteCustomer(c *gin.Context) {
@@ -84,12 +105,10 @@ func DeleteCustomer(c *gin.Context) {
 		return
 	}
 
-	for i, customer := range Customers {
-		if customer.ID == id {
-			Customers = append(Customers[:i], Customers[i+1:]...)
-			c.IndentedJSON(http.StatusOK, gin.H{"message": "Cliente eliminado correctamente"})
-			return
-		}
+	_, err = database.DB.Exec("DELETE FROM customers WHERE id = $1", id)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al eliminar cliente"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Cliente no encontrado"})
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Cliente eliminado correctamente"})
 }

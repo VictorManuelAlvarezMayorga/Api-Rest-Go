@@ -2,12 +2,15 @@ package main
 
 import (
 	"os"
+	"ui2/database"
 	"ui2/routes"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	database.Connect() //conexion a la db en la nube al iniciar
+
 	router := gin.Default()
 	routes.Routes(router)
 

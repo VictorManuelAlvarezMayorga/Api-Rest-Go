@@ -3,19 +3,37 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"ui2/database"
 	"ui2/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-var Sales = []models.Sale{
-	{ID: 1, CarID: 1, CustomerID: 2, SaleDate: "2024-03-15", Price: 85000.00},
-	{ID: 2, CarID: 3, CustomerID: 1, SaleDate: "2024-06-22", Price: 120000.00},
-	{ID: 3, CarID: 4, CustomerID: 3, SaleDate: "2025-01-10", Price: 95000.00},
-}
-
 func GetSales(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, Sales)
+	rows, err := database.DB.Query(`
+		SELECT s.id, c.first_name, c.last_name, ca.brand, ca.model, ca.version, s.sale_date, s.price
+		FROM sales s
+		JOIN customers c ON s.customer_id = c.id
+		JOIN cars ca ON s.car_id = ca.id
+		WHERE s.isdeleted = false
+	`)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener ventas"})
+		return
+	}
+	defer rows.Close()
+
+	var sales []models.SaleDetail
+	for rows.Next() {
+		var sale models.SaleDetail
+		err := rows.Scan(&sale.ID, &sale.FirstName, &sale.LastName, &sale.Brand, &sale.Model, &sale.Version, &sale.SaleDate, &sale.Price)
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al leer datos"})
+			return
+		}
+		sales = append(sales, sale)
+	}
+	c.IndentedJSON(http.StatusOK, sales)
 }
 
 func GetSaleByID(c *gin.Context) {
@@ -25,13 +43,19 @@ func GetSaleByID(c *gin.Context) {
 		return
 	}
 
-	for _, sale := range Sales {
-		if sale.ID == id {
-			c.IndentedJSON(http.StatusOK, sale)
-			return
-		}
+	var sale models.SaleDetail
+	err = database.DB.QueryRow(`
+		SELECT s.id, c.first_name, c.last_name, ca.brand, ca.model, ca.version, s.sale_date, s.price
+		FROM sales s
+		JOIN customers c ON s.customer_id = c.id
+		JOIN cars ca ON s.car_id = ca.id
+		WHERE s.id = $1 AND s.isdeleted = false
+	`, id).Scan(&sale.ID, &sale.FirstName, &sale.LastName, &sale.Brand, &sale.Model, &sale.Version, &sale.SaleDate, &sale.Price)
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Venta no encontrada"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Venta no encontrada"})
+	c.IndentedJSON(http.StatusOK, sale)
 }
 
 func PostSale(c *gin.Context) {
@@ -45,7 +69,14 @@ func PostSale(c *gin.Context) {
 		return
 	}
 
-	Sales = append(Sales, newSale)
+	err := database.DB.QueryRow(
+		"INSERT INTO sales (car_id, customer_id, sale_date, price) VALUES ($1, $2, $3, $4) RETURNING id",
+		newSale.CarID, newSale.CustomerID, newSale.SaleDate, newSale.Price,
+	).Scan(&newSale.ID)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al insertar venta"})
+		return
+	}
 	c.IndentedJSON(http.StatusCreated, newSale)
 }
 
@@ -56,12 +87,10 @@ func DeleteSale(c *gin.Context) {
 		return
 	}
 
-	for i, sale := range Sales {
-		if sale.ID == id {
-			Sales = append(Sales[:i], Sales[i+1:]...)
-			c.IndentedJSON(http.StatusOK, gin.H{"message": "Venta eliminada correctamente"})
-			return
-		}
+	_, err = database.DB.Exec("UPDATE sales SET isdeleted = true, updatedat = now() WHERE id = $1", id)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error al eliminar venta"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Venta no encontrada"})
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Venta eliminada correctamente"})
 }
