@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 	"ui2/models"
 
 	"github.com/gin-gonic/gin"
@@ -25,9 +26,14 @@ func PostCars(c *gin.Context) {
 }
 
 func GetCarByID(c *gin.Context) {
-	id := c.Param("id")
 
 	for _, a := range models.Cars {
+		id, err := strconv.Atoi(c.Param("id")) // strcon convierte string a int
+		if err != nil {
+			c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "ID inválido"})
+			return
+		}
+
 		if a.ID == id {
 			c.IndentedJSON(http.StatusOK, a)
 			return
@@ -37,7 +43,11 @@ func GetCarByID(c *gin.Context) {
 }
 
 func DeleteCar(c *gin.Context) {
-	id := c.Param("id")
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "ID inválido"})
+		return
+	}
 
 	for i, a := range models.Cars {
 		if a.ID == id {
@@ -50,8 +60,13 @@ func DeleteCar(c *gin.Context) {
 }
 
 func EditCar(c *gin.Context) {
-	id := c.Param("id")
+
 	var updatedCar models.Car
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "ID inválido"})
+		return
+	}
 
 	if err := c.BindJSON(&updatedCar); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
